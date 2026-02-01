@@ -1,0 +1,13 @@
+pandas
+sqlalchemy
+seaborn
+fastapi
+python-dotenv
+dotenv
+uvicorn
+psycopg2-binary
+starlette
+bcrypt==4.0.1
+passlib
+python-multipart
+pydantic
