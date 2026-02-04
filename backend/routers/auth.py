@@ -11,6 +11,10 @@ from models import User
 from dependencies import db_dependency
 from jose import JWTError, jwt
 from dotenv import load_dotenv
+import logging
+
+logger = logging.getLogger('uvicorn.error')
+logger.setLevel(logging.DEBUG)
 
 load_dotenv()
 
@@ -27,7 +31,7 @@ class CreateUserBasemodel(BaseModel) :
     first_name: str
     last_name: str
     password: str
-    role: str
+    role: str = "user"
 
 class AccessToken(BaseModel):
     access_token: str
@@ -56,29 +60,30 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
         if user_email is None or user_id is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                                 detail="Could not validate user.")
-        return {'username': user_email, 'id': user_id}
+        return {'user_email': user_email, 'user_id': user_id}
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                                 detail="Could not validate user.")
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
-async def create_user(db: db_dependency, user_model: List[CreateUserBasemodel]):
+async def create_user(db: db_dependency, user_model: CreateUserBasemodel):
 
     # Transforma cada item em dict e já faz hash da senha
-    users_to_insert = []
-    for u in user_model:
-        users_to_insert.append({
-            "user_email": u.email,
-            "user_first_name": u.first_name,
-            "user_last_name": u.last_name,
-            "user_hashed_password": bcrypt_context.hash(u.password),
-            "user_role": u.role
-        })
+    user_to_insert = {
+        "user_email": user_model.email,
+        "user_first_name": user_model.first_name,
+        "user_last_name": user_model.last_name,
+        "user_hashed_password": bcrypt_context.hash(user_model.password),
+        "user_role": str.upper(user_model.role).strip()
+    }
 
-    db.execute(insert(User), users_to_insert)
+    if(user_to_insert["user_role"] not in ["USER", "ADMIN"]):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User role not available")
+
+    db.execute(insert(User), user_to_insert)
     db.commit()
 
-    return {"inserted": len(user_model)}
+    return "User created successfully"
 
 @router.post("/token", status_code=status.HTTP_200_OK, response_model=AccessToken)
 async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,Depends()],
