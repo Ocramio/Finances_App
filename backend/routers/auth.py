@@ -1,6 +1,6 @@
 from datetime import timedelta, datetime, timezone
 import os
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from starlette import status
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
@@ -85,14 +85,23 @@ async def create_user(db: db_dependency, user_model: CreateUserBasemodel):
 
     return "User created successfully"
 
-@router.post("/token", status_code=status.HTTP_200_OK, response_model=AccessToken)
+@router.post("/token", status_code=status.HTTP_200_OK)
 async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,Depends()],
-                                 db: db_dependency):
+                                 db: db_dependency, response: Response):
     user = authenticate_user(form_data.username, form_data.password, db)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                                 detail="Could not validate user.")
     token = create_access_token(user.user_email, user.user_id, expires_delta=timedelta(minutes=20))
 
-    return {'access_token': token, 'token_type': 'bearer'}
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=False, 
+        samesite="lax",
+        max_age=1200
+    )
+
+    return {"message": "Login successful"}
 
