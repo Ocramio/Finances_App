@@ -6,6 +6,8 @@ import pandas as pd
 from routers import auth, expenses
 from sqlalchemy import select, text
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import os
 
 app = FastAPI()
 
@@ -27,3 +29,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# app.mount(
+#     "/",
+#     StaticFiles(directory=os.path.join(BASE_DIR, "..", "frontend"), html=True),
+#     name="frontend"
+# )
