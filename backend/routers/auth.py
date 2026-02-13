@@ -1,5 +1,6 @@
 from datetime import timedelta, datetime, timezone
 import os
+from sqlite3 import IntegrityError
 from fastapi import APIRouter, Depends, HTTPException, Response
 from starlette import status
 from passlib.context import CryptContext
@@ -31,7 +32,6 @@ class CreateUserBasemodel(BaseModel):
     first_name: str
     last_name: str
     password: str
-    role: str = "user"
 
 class AccessToken(BaseModel):
     access_token: str
@@ -65,7 +65,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                                 detail="Could not validate user.")
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post("/signup", status_code=status.HTTP_201_CREATED)
 async def create_user(db: db_dependency, user_model: CreateUserBasemodel):
 
     # Transforma cada item em dict e já faz hash da senha
@@ -73,15 +73,18 @@ async def create_user(db: db_dependency, user_model: CreateUserBasemodel):
         "user_email": user_model.email,
         "user_first_name": user_model.first_name,
         "user_last_name": user_model.last_name,
-        "user_hashed_password": bcrypt_context.hash(user_model.password),
-        "user_role": str.upper(user_model.role).strip()
+        "user_hashed_password": bcrypt_context.hash(user_model.password)
     }
-
-    if(user_to_insert["user_role"] not in ["USER", "ADMIN"]):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User role not available")
-
-    db.execute(insert(User), user_to_insert)
-    db.commit()
+        
+    try:
+        db.execute(insert(User), user_to_insert)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        if(user_to_insert.get("user_email") in str(e.orig)):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already has an account")
+        else:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error, try again later") 
 
     return "User created successfully"
 

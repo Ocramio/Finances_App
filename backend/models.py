@@ -11,7 +11,6 @@ class User(Base):
     user_first_name = Column(Text, nullable=False)
     user_last_name = Column(Text, nullable=False)
     user_hashed_password = Column(Text, nullable=False)
-    user_role = Column(Text, nullable=False)
 
     expenses = relationship("Expense", back_populates="user")
 
