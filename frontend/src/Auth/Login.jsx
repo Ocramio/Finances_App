@@ -6,7 +6,7 @@ import "./Login.css"
 
 function LoginForm() {
 
-   const navigate = useNavigate();
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     username: '',
@@ -30,7 +30,7 @@ function LoginForm() {
     };
     
     try {
-      const resposta = await axios.post('http://127.0.0.1:8000/auth/token', body, headers);
+      const resposta = await axios.post(`${process.env.REACT_APP_API_URL}/auth/token`, body, headers);
       if(resposta.status === 200){
         navigate("/dashboard")
       }else{

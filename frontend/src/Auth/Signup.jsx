@@ -53,7 +53,7 @@ function Signup() {
     };
     
     try {
-      const response = await axios.post('http://127.0.0.1:8000/auth/signup', body, headers);
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/auth/signup`, body, headers);
       if(response.status === 201){
         setError({message:"Account created", color:"green"})
         wait(5000)
